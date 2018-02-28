@@ -9,6 +9,12 @@ import com.spotify.apollo.route.Middleware;
 import com.spotify.apollo.route.Route;
 import com.spotify.apollo.route.SyncHandler;
 
+// Notice, do not import com.mysql.jdbc.*
+// or you will have problems!
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
 import java.util.Optional;
 
 /**
@@ -41,6 +47,16 @@ final class CalculatorApp {
      * @return A response of an integer representing the sum
      */
     static Response<Integer> add(Request request) {
+        Connection conn = null;
+        try {
+            // The newInstance() call is a work around for some
+            // broken Java implementations
+            Class.forName("com.mysql.jdbc.Driver").newInstance();
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/test?" +
+                            "user=minty&password=greatsqldb");
+        } catch (Exception ex) {
+            // handle the error
+        }
         Optional<String> t1 = request.parameter("t1");
         Optional<String> t2 = request.parameter("t2");
         if (t1.isPresent() && t2.isPresent()) {
