@@ -8,12 +8,14 @@ import com.spotify.apollo.route.AsyncHandler;
 import com.spotify.apollo.route.Middleware;
 import com.spotify.apollo.route.Route;
 import com.spotify.apollo.route.SyncHandler;
+import com.typesafe.config.ConfigException;
 
 // Notice, do not import com.mysql.jdbc.*
 // or you will have problems!
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 import java.util.Optional;
 
@@ -47,19 +49,35 @@ final class CalculatorApp {
      * @return A response of an integer representing the sum
      */
     static Response<Integer> add(Request request) {
+        System.out.println("Trying to connect to database");
         Connection conn = null;
         try {
-            // The newInstance() call is a work around for some
-            // broken Java implementations
-            Class.forName("com.mysql.jdbc.Driver").newInstance();
-            conn = DriverManager.getConnection("jdbc:mysql://localhost/test?" +
-                            "user=minty&password=greatsqldb");
+            conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/mydb?" +
+                    "user=astrocats&password=mysqlpass");
         } catch (Exception ex) {
-            // handle the error
+            System.out.println("Exception connecting to db: " + ex.getMessage());
         }
+
+        // Extract params from request
         Optional<String> t1 = request.parameter("t1");
         Optional<String> t2 = request.parameter("t2");
+
         if (t1.isPresent() && t2.isPresent()) {
+            // Write operands to database
+            if (conn != null) {
+                try {
+                    // create a Statement from the connection
+                    Statement statement = conn.createStatement();
+
+                    // insert the data
+                    statement.executeUpdate("INSERT INTO add_requests " +
+                            "( op1, op2 ) " +
+                            "VALUES (" + t1.get() + "," + t2.get() + ")");
+                } catch (Exception ex) {
+                    System.out.println("Exception writing to db: " + ex.getMessage());
+                }
+            }
+
             int result = Integer.valueOf(t1.get()) + Integer.valueOf(t2.get());
             return Response.forPayload(result);
         } else {
